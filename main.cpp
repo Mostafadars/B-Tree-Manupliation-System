@@ -208,7 +208,7 @@ public:
 ////////////////////////////////////////////////END OF INSERT///////////////////////////////////////////////////////////
     void Starter() {
         // For each record
-        for (int recordIndex = 0; recordIndex < numberOfRecords + 1; ++recordIndex) {
+        for (int recordIndex = 0; recordIndex < numberOfRecords ; ++recordIndex) {
             // Write -1 in the first cell to indicate it is
             // an empty record (available for allocation)
             write_val(-1, recordIndex, 0);
