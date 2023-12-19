@@ -483,7 +483,6 @@ int main() {
                 int recID,ref;
                 cout << "Enter record ID and reference: \n";
                 cin >> recID >> ref;
-                btree.InsertNewRecordAtIndex(recID, ref);
                 if (btree.InsertNewRecordAtIndex(recID, ref) == -1)
                     cout << "There is no place to insert the record\n";
                 else
