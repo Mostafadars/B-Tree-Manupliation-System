@@ -255,6 +255,7 @@ public:
         file.seekg(recordNumber * recordSize() + charSize, ios::beg);
         for (auto p: read_node_values)
             file << int_Converter(p.first) << int_Converter(p.second);
+        file.seekg(0, ios::beg);
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //   Change Record status to leaf or not
