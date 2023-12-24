@@ -373,6 +373,348 @@ public:
     int leafStatus(int recordNumber) {
         return read_val(recordNumber, 0);
     }
+
+    
+    // delete from non-leaf nodes
+    void DeleteRecordFromIndex (int recordId, int reference){
+        vector<pair<int, int>> current; //vector represent node
+
+       
+        // Keep track of visited records and its child to updateAfterDelete them after Deletetion
+        stack<int> visited;
+        stack<int> refChild;
+
+        // Search for recordId in every node in the b-tree
+        // starting with the root
+        int i = 1;
+        bool found = false;
+        while (!found) {
+            visited.push(i);
+            current = read_node_values(i);
+            for (auto p: current) {
+                // If a greater value is found
+                if (p.first >= recordId) {
+                    if(p.second == reference){
+                        found = true;
+                    }
+                    else{
+                        // B-Tree traversal
+                        i = p.second;
+                        refChild.push(p.second);
+                    }
+                    
+                    break;
+                }
+            }
+
+        }
+
+        visited.pop();
+        current = read_node_values(i);
+
+
+        
+
+        //get the pair of the record to remove it 
+        pair<int , int> value;
+        value.first = recordId;
+        value.second = reference;
+
+        current.erase(remove(current.begin(), current.end(), value), current.end());
+
+        // remove the record from the root
+        if(visited.empty()){
+            writeNode(current, i);
+            return;
+        }
+
+        // case 1 and 2
+        // if the node after deletion contains greater than or equal m/2
+        if(current.size()>=(m/2)){
+            writeNode(current, i);
+            checkForUpdate(visited , refChild , recordId);
+            
+        }
+        else{
+            
+            pair<int, bool> siblingAndPosition = getSibling(visited.top() , refChild.top());
+            int siblingIndex = siblingAndPosition.first;
+            bool isPrevious = siblingAndPosition.second;
+
+            // get from sibling is allowed (case 3)
+            if(getFromSibling(siblingIndex)){
+
+                // get from the next sibling 
+                // this does not affect on the value in the parent of the sibling
+                if(!isPrevious){
+                    
+
+                }
+
+                // get from the previous sibling
+                // this affects on the value in the parent of the sibling
+                else{
+                    
+                }
+
+
+            }
+
+            // merge two nodes(case 4)
+            else{
+
+               
+
+            }
+
+        }         
+    }
+
+
+    // delete from the leaf nodes
+    void DeleteRecordFromIndex (int recordId){
+        vector<pair<int, int>> current; //vector represent node
+
+        // If the root is empty
+        if (isEmpty(1)) {
+            cout<< "not found"<< endl;
+            return;
+        }
+        // if the id is greater than the largest value in the root
+        // that mean it is not found
+        vector<pair<int, int>> root = read_node_values(1);
+        
+        if(recordId > root.back().first) {
+            cout<< "not found"<< endl;
+            return;
+        }
+        
+        // Keep track of visited records and its child to updateAfterDelete them after Deletetion
+        stack<int> visited;
+        stack<int> refChild;
+
+        // Search for recordId in every node in the b-tree
+        // starting with the root
+        int i = 1;
+        while (!isLeaf(i)) {
+            visited.push(i);
+            current = read_node_values(i);
+            for (auto p: current) {
+                // If a greater value is found
+                if (p.first >= recordId) {
+                    // B-Tree traversal
+                    i = p.second;
+                    refChild.push(p.second);
+                    break;
+                }
+            }
+
+        }
+        current = read_node_values(i);
+
+
+        // search in current node that may be deleted
+        bool exist = false;
+        int ref = 0;
+        for (auto pair: current){
+            if (pair.first == recordId){
+                exist = true;
+                ref = pair.second;
+            }
+        }
+
+        // if is not exist 
+        if(!exist){
+            cout<< "not found"<< endl;
+            return;
+        }
+        // record is exist
+
+        //get the pair of the record to remove it 
+        pair<int , int> value;
+        value.first = recordId;
+        value.second = ref;
+
+
+
+
+        current.erase(remove(current.begin(), current.end(), value), current.end());
+
+        // remove the record from the root
+        if(visited.empty()){
+            writeNode(current, i);
+            if(current.size()==0){
+                updateHeaderAfterDelete(1);
+            }
+            cout<<"delete successfully"<<endl;
+
+            return;
+        }
+
+        // case 1 and 2
+        // if the node after deletion contains greater than or equal m/2
+        if(current.size()>=(m/2)){
+            writeNode(current, i);
+            checkForUpdate(visited , refChild , recordId);
+            
+        }
+        else{
+            
+            pair<int, bool> siblingAndPosition = getSibling(visited.top() , refChild.top());
+            int siblingIndex = siblingAndPosition.first;
+            bool isPrevious = siblingAndPosition.second;
+
+            // get from sibling is allowed (case 3)
+            if(getFromSibling(siblingIndex)){
+
+                // get from the next sibling 
+                // this does not affect on the value in the parent of the sibling
+                if(!isPrevious){
+                    
+                    // keep track of the previous max to update it after take key from next sibling
+                    int previousMax = current.back().first;
+                    
+
+                    
+                    checkForUpdate(visited , refChild , recordId , previousMax );
+
+                }
+
+                // get from the previous sibling
+                // this affects on the value in the parent of the sibling
+                else{
+
+                    // previous max of the previous sibling
+                    int previousMax ;
+
+                    updatePreviousSibling(visited.top() , previousMax);
+
+                    checkForUpdate(visited , refChild , recordId);
+
+                }
+
+
+            }
+
+            // merge two nodes(case 4)
+            else{
+
+                // previous max of the sibling
+                int previousMax ;
+                
+
+                // remove the pair of the deleted node from the parent
+                bool isUpdated = updateParentAfterMerge(visited.top(), refChild.top());
+
+
+                // if not update call the function checkForUpdate on the sibling
+                if(!isUpdated){
+                    
+                // change the last reference of the deleted node 
+                // to the reference of the merged sibling node
+                refChild.pop();
+                refChild.push(siblingIndex);
+
+
+                checkForUpdate(visited , refChild , recordId , previousMax);
+
+                }
+
+
+                
+                updateHeaderAfterDelete(i);
+
+            }
+
+        }
+
+
+        updateRootAfterDelete();
+
+        cout<<"delete successfully"<<endl;
+                
+
+    }
+
+
+    // update the root if it contains one value
+    // merge the child into it
+    void updateRootAfterDelete(){}
+
+    // remove the key and its reference of the deleted node from the parent
+    bool updateParentAfterMerge(int parentRecordNumber,  int deleteRef){}
+
+
+    // set the header to the new deleted node
+    // and put the previous (next empty) in the deleted node
+    void updateHeaderAfterDelete(int recordNumber){
+        // get the next empty from the header
+        int nextempty = nextEmpty();
+
+        // Update the next empty with the deleted node
+        write_val(recordNumber, 0, 1);
+
+        // update the status of the node 
+        leaf_state(recordNumber , -1);
+
+
+        // write the next empty that we get it from the header 
+        // in the deleted node
+
+        vector<pair<int, int>> updatedNextEmpty;
+        pair<int, int> newNextEmpty;
+
+        // next empty
+        newNextEmpty.first = nextempty;
+        newNextEmpty.second = -1;
+        updatedNextEmpty.push_back(newNextEmpty);
+        writeNode(updatedNextEmpty , recordNumber);
+    }
+
+    //Search in parent to get the ref of prev max 
+    //then take the max from the child and update prev max in the parent with the new max
+
+    void updatePreviousSibling(int parentRecordNumber , int prevMax){}
+
+
+    // check all visited node need to update or not 
+    void checkForUpdate(stack<int> visited , stack<int> refChild ,int recordId , int previousMax = -1){
+        // check in the visited node 
+        // we remove pair exists in the parent then update parent(case 2)
+        // else don't update parent (case 1)
+        while (!visited.empty()) {
+            int lastVisitedIndex = visited.top();
+            visited.pop();
+            int lastRefIndex = refChild.top();
+            refChild.pop();
+
+            // if the deleted record is in the parent then update parent
+            // or the previous max equal value not -1 that mean there is new max so we must update the parent
+            if(isExistInParent(lastVisitedIndex , recordId) || previousMax!=-1){
+                updateAfterDelete(lastVisitedIndex , lastRefIndex , recordId , previousMax);
+            }
+            else{
+                break;
+            }
+        }
+    }
+
+
+
+    //get sibling and its position (previous sibling or next sibling)
+    // false if next sibling and true if previous sibling
+    pair<int , bool> getSibling(int parentRecordNumber , int ref){}
+
+    // return true if the taking value from the sibling is allowed otherwise return false
+    bool getFromSibling(int siblingRecoredNumber){}
+
+    //return true if the deleted record in the parent otherwise return false
+    bool isExistInParent(int parentRecordNumber , int recordId){}
+
+
+    // updated node that affected by the deletion
+    void updateAfterDelete(int parentRecordNumber , int ref , int recordId , int previousMax){}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int SearchARecord(int recordId) {
         if (isEmpty(1)) return -1;
@@ -459,14 +801,18 @@ int main() {
     BTree btree;
     cout <<"If You Want to Run Example In Assigment Press 1 or 2 For New Example==>";
     cin>>Choice;
+    bool go =false;
     if (Choice==1) {
         //For Me Please Don't Delete This Code
         //btree.CreateIndexFileFile("C:\\Users\\dell\\CLionProjects\\untitled4\\index.txt", 10,5);
         btree.CreateIndexFileFile("index.txt", 10,5);
         Example example;
         example.insertions(btree);
+        go=true;
+
     }
-    else if (Choice==2){
+    if (Choice==2 || go){
+        if(!go){
         char *FileName=new char[100];
         int RecordSize,M;
         cout <<"Enter The File Name==>" <<endl;
@@ -476,6 +822,7 @@ int main() {
         cout<<" Enter M==>"<<endl;
         cin>>M;
         btree.CreateIndexFileFile(FileName, RecordSize,M);
+        }
         while(true){
             int c;
             cout << "1-InsertNewRecordAtIndex\n2-delete\n3-search\n4-DisplayIndexFileContent\n5-exit\n";
@@ -490,8 +837,11 @@ int main() {
                     cout << "Record inserted successfully\n";
             }
             else if(c == 2){
-                cout <<"Not Implemented Yet"<<endl;
-            }
+                int recID;
+                cout<< "Enter record ID: \n";
+                cin >> recID;
+                btree.DeleteRecordFromIndex(recID);
+             }
             else if(c== 3){
                 int recID;
                 cout<< "Enter record ID: \n";
