@@ -708,14 +708,48 @@ public:
     // return true if the taking value from the sibling is allowed otherwise return false
     bool getFromSibling(int siblingRecoredNumber){}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     //return true if the deleted record in the parent otherwise return false
-    bool isExistInParent(int parentRecordNumber , int recordId){}
+    bool isExistInParent(int parentRecordNumber , int recordId){
+        vector<pair<int, int>> parent;
+        parent = read_node_values(parentRecordNumber);
+        for (auto pair: parent){
+            if (pair.first == recordId){
+                return true;
+            }
+        }
 
+        return false;
+    }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // updated node that affected by the deletion
-    void updateAfterDelete(int parentRecordNumber , int ref , int recordId , int previousMax){}
+    // updated all node that affected by the deletion
+    void updateAfterDelete(int parentRecordNumber , int ref , int recordId , int previousMax){
+        // get parent and its child
+        vector<pair<int, int>> parent;
+        vector<pair<int, int>> child;
+        parent = read_node_values(parentRecordNumber);
+        child = read_node_values(ref);
+
+        //get the max value in child
+        int newMax = child.back().first;
+
+        // search for the vaule that we remove it to change to new max value
+        for (auto& pair : parent) {
+            // if the deleted record is equal change it to the new max value
+            // or if there is previous max in the parent change it to the new max value
+            if (pair.first == recordId || pair.first == previousMax) {
+                pair.first = newMax;
+            }
+        }
+
+        // write it in index file after update
+        writeNode(parent, parentRecordNumber);
+    }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     int SearchARecord(int recordId) {
         if (isEmpty(1)) return -1;
         vector<pair<int, int>> current;
