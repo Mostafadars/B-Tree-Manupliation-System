@@ -639,10 +639,81 @@ public:
 
     // update the root if it contains one value
     // merge the child into it
-    void updateRootAfterDelete(){}
+    void updateRootAfterDelete(){
+        vector<pair<int, int>> root;
+        root = read_node_values(1);
+
+        // if the root contains one value
+        if(root.size()==1){
+            int refChild = root.back().second;
+            vector<pair<int, int>> child;
+            child = read_node_values(root.back().second);
+
+            // the child is leaf or not
+            bool leaf = isLeaf(refChild);
+
+            root.pop_back();
+
+            // merge the child into the root
+            for (auto& p : child) {
+                root.push_back(p);
+            }
+
+
+            // sort the root
+            sort(root.begin(), root.end());
+
+            // write it into the file
+            writeNode(root , 1);
+
+            // update the header of the file
+            updateHeaderAfterDelete(refChild);
+
+
+            // if the child is leaf change the status of the root to leaf
+            if(leaf){
+                leaf_state(1 , 0);
+            }
+
+        }
+
+    }
 
     // remove the key and its reference of the deleted node from the parent
-    bool updateParentAfterMerge(int parentRecordNumber,  int deleteRef){}
+    bool updateParentAfterMerge(int parentRecordNumber,  int deleteRef){
+        vector<pair<int, int>> parent;
+        parent = read_node_values(parentRecordNumber);
+
+        bool updateParent = false;
+        // parent need update or not
+        if(parent.size() == m/2){
+            updateParent = true;
+        }
+
+
+        // search for the value that will be deleted from the parent
+        for (auto it = parent.begin(); it != parent.end(); it++) {
+            if (it->second == deleteRef) {
+                if(updateParent){
+                    // apply the 4 cases on the parent node
+                    DeleteRecordFromIndex(it->first, it->second);
+                }
+                else{
+                    // just remove it
+                    parent.erase(it);
+                }
+                break;
+            }
+        }
+
+        // if not update write the parent into the file directly
+        if(!updateParent){
+            writeNode(parent , parentRecordNumber);
+        }
+
+        return updateParent;
+
+    }
 
 
     // set the header to the new deleted node
