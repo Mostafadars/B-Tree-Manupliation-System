@@ -374,13 +374,13 @@ public:
         return read_val(recordNumber, 0);
     }
 
-    
+
     // delete from non-leaf nodes
     void DeleteRecordFromIndex (int recordId, int reference){
         vector<pair<int, int>> current; //vector represent node
 
-       
-        // Keep track of visited records and its child to updateAfterDelete them after Deletetion
+
+        // Keep track of visited records and its child to updateAfterDelete them after Deletion
         stack<int> visited;
         stack<int> refChild;
 
@@ -402,7 +402,7 @@ public:
                         i = p.second;
                         refChild.push(p.second);
                     }
-                    
+
                     break;
                 }
             }
@@ -413,7 +413,7 @@ public:
         current = read_node_values(i);
 
 
-        
+
 
         //get the pair of the record to remove it 
         pair<int , int> value;
@@ -433,41 +433,38 @@ public:
         if(current.size()>=(m/2)){
             writeNode(current, i);
             checkForUpdate(visited , refChild , recordId);
-            
+
         }
         else{
-            
+
             pair<int, bool> siblingAndPosition = getSibling(visited.top() , refChild.top());
             int siblingIndex = siblingAndPosition.first;
             bool isPrevious = siblingAndPosition.second;
 
             // get from sibling is allowed (case 3)
             if(getFromSibling(siblingIndex)){
-
                 // get from the next sibling 
                 // this does not affect on the value in the parent of the sibling
                 if(!isPrevious){
-                    
 
                 }
 
                 // get from the previous sibling
                 // this affects on the value in the parent of the sibling
                 else{
-                    
-                }
 
+                }
 
             }
 
             // merge two nodes(case 4)
             else{
 
-               
+
 
             }
 
-        }         
+        }
     }
 
 
@@ -483,12 +480,12 @@ public:
         // if the id is greater than the largest value in the root
         // that mean it is not found
         vector<pair<int, int>> root = read_node_values(1);
-        
+
         if(recordId > root.back().first) {
             cout<< "not found"<< endl;
             return;
         }
-        
+
         // Keep track of visited records and its child to updateAfterDelete them after Deletetion
         stack<int> visited;
         stack<int> refChild;
@@ -556,44 +553,44 @@ public:
         if(current.size()>=(m/2)){
             writeNode(current, i);
             checkForUpdate(visited , refChild , recordId);
-            
+
         }
         else{
-            
+
             pair<int, bool> siblingAndPosition = getSibling(visited.top() , refChild.top());
             int siblingIndex = siblingAndPosition.first;
             bool isPrevious = siblingAndPosition.second;
 
-            // get from sibling is allowed (case 3)
-            if(getFromSibling(siblingIndex)){
+            // get from sibling is allowed(case 3)
+            if (getFromSibling(siblingIndex)) {
+                vector<pair<int, int>> siblingNode = read_node_values(siblingIndex);
 
-                // get from the next sibling 
-                // this does not affect on the value in the parent of the sibling
-                if(!isPrevious){
-                    
-                    // keep track of the previous max to update it after take key from next sibling
-                    int previousMax = current.back().first;
-                    
+                // Check which sibling to consider based on the isPrevious flag
+                vector<pair<int, int>> neighborNode;
+                int neighborIndex = isPrevious ? (siblingIndex - 1) : (siblingIndex + 1);
 
-                    
-                    checkForUpdate(visited , refChild , recordId , previousMax );
+                neighborNode = read_node_values(neighborIndex);
 
+                // Decide which record to borrow from the sibling node
+                pair<int, int> borrowedRecord;
+                if (isPrevious) {
+                    // Borrow the last record from the previous sibling
+                    borrowedRecord = neighborNode.back();
+                    neighborNode.pop_back();
+                } else {
+                    // Borrow the first record from the next sibling
+                    borrowedRecord = neighborNode.front();
+                    neighborNode.erase(neighborNode.begin());
                 }
 
-                // get from the previous sibling
-                // this affects on the value in the parent of the sibling
-                else{
+                // Update the current node with the borrowed record
+                current.push_back(borrowedRecord);
+                sort(current.begin(), current.end());
 
-                    // previous max of the previous sibling
-                    int previousMax ;
+                writeNode(current, i);
 
-                    updatePreviousSibling(visited.top() , previousMax);
-
-                    checkForUpdate(visited , refChild , recordId);
-
-                }
-
-
+                // Update the parent if necessary
+                checkForUpdate(visited, refChild, borrowedRecord.first);
             }
 
             // merge two nodes(case 4)
@@ -601,7 +598,7 @@ public:
 
                 // previous max of the sibling
                 int previousMax ;
-                
+
 
                 // remove the pair of the deleted node from the parent
                 bool isUpdated = updateParentAfterMerge(visited.top(), refChild.top());
@@ -609,8 +606,8 @@ public:
 
                 // if not update call the function checkForUpdate on the sibling
                 if(!isUpdated){
-                    
-                // change the last reference of the deleted node 
+
+                // change the last reference of the deleted node
                 // to the reference of the merged sibling node
                 refChild.pop();
                 refChild.push(siblingIndex);
@@ -621,7 +618,7 @@ public:
                 }
 
 
-                
+
                 updateHeaderAfterDelete(i);
 
             }
@@ -632,7 +629,7 @@ public:
         updateRootAfterDelete();
 
         cout<<"delete successfully"<<endl;
-                
+
 
     }
 
@@ -774,10 +771,39 @@ public:
 
     //get sibling and its position (previous sibling or next sibling)
     // false if next sibling and true if previous sibling
-    pair<int , bool> getSibling(int parentRecordNumber , int ref){}
+    pair<int, bool> getSibling(int parentRecordNumber, int ref) {
+        vector<pair<int, int>> parent = read_node_values(parentRecordNumber);
 
-    // return true if the taking value from the sibling is allowed otherwise return false
-    bool getFromSibling(int siblingRecoredNumber){}
+        // Find the index of the child in the parent's children references
+        auto it = find_if(parent.begin(), parent.end(), [ref](const pair<int, int> &p) {
+            return p.second == ref;
+        });
+
+        if (it != parent.end()) {
+            int childIndex = distance(parent.begin(), it);
+
+            // Determine if the sibling is the previous or next sibling
+            if (childIndex > 0) {
+                // Previous sibling exists
+                return make_pair(parent[childIndex - 1].second, true);
+            } else {
+                // Next sibling exists
+                return make_pair(parent[childIndex + 1].second, false);
+            }
+        }
+
+        // Return -1 for the sibling index and false for position if not found
+        return make_pair(-1, false);
+    }
+
+// return true if taking a value from the sibling is allowed; otherwise, return false
+    bool getFromSibling(int siblingRecordNumber) {
+        vector<pair<int, int>> sibling = read_node_values(siblingRecordNumber);
+
+        // Check if the sibling has more than m/2 values
+        return (sibling.size() > m / 2);
+    }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
