@@ -380,7 +380,7 @@ public:
         vector<pair<int, int>> current; //vector represent node
 
 
-        // Keep track of visited records and its child to updateAfterDelete them after Deletion
+        // Keep track of visited records and its child to updateAfterDelete them after Deletetion
         stack<int> visited;
         stack<int> refChild;
 
@@ -415,7 +415,7 @@ public:
 
 
 
-        //get the pair of the record to remove it 
+        //get the pair of the record to remove it
         pair<int , int> value;
         value.first = recordId;
         value.second = reference;
@@ -443,21 +443,24 @@ public:
 
             // get from sibling is allowed (case 3)
             if(getFromSibling(siblingIndex)){
-                // get from the next sibling 
+
+                // get from the next sibling
                 // this does not affect on the value in the parent of the sibling
                 if(!isPrevious){
 
+
                 }
 
-                // get from the previous sibling
-                // this affects on the value in the parent of the sibling
+                    // get from the previous sibling
+                    // this affects on the value in the parent of the sibling
                 else{
 
                 }
 
+
             }
 
-            // merge two nodes(case 4)
+                // merge two nodes(case 4)
             else{
 
 
@@ -520,14 +523,14 @@ public:
             }
         }
 
-        // if is not exist 
+        // if is not exist
         if(!exist){
             cout<< "not found"<< endl;
             return;
         }
         // record is exist
 
-        //get the pair of the record to remove it 
+        //get the pair of the record to remove it
         pair<int , int> value;
         value.first = recordId;
         value.second = ref;
@@ -561,7 +564,7 @@ public:
             int siblingIndex = siblingAndPosition.first;
             bool isPrevious = siblingAndPosition.second;
 
-            // get from sibling is allowed(case 3)
+            // Case 3: Get a record from the sibling node if available
             if (getFromSibling(siblingIndex)) {
                 vector<pair<int, int>> siblingNode = read_node_values(siblingIndex);
 
@@ -577,7 +580,8 @@ public:
                     // Borrow the last record from the previous sibling
                     borrowedRecord = neighborNode.back();
                     neighborNode.pop_back();
-                } else {
+                }
+                else {
                     // Borrow the first record from the next sibling
                     borrowedRecord = neighborNode.front();
                     neighborNode.erase(neighborNode.begin());
@@ -587,6 +591,7 @@ public:
                 current.push_back(borrowedRecord);
                 sort(current.begin(), current.end());
 
+                // Write the updated current node back to the file
                 writeNode(current, i);
 
                 // Update the parent if necessary
@@ -607,13 +612,13 @@ public:
                 // if not update call the function checkForUpdate on the sibling
                 if(!isUpdated){
 
-                // change the last reference of the deleted node
-                // to the reference of the merged sibling node
-                refChild.pop();
-                refChild.push(siblingIndex);
+                    // change the last reference of the deleted node
+                    // to the reference of the merged sibling node
+                    refChild.pop();
+                    refChild.push(siblingIndex);
 
 
-                checkForUpdate(visited , refChild , recordId , previousMax);
+                    checkForUpdate(visited , refChild , recordId , previousMax);
 
                 }
 
@@ -722,11 +727,11 @@ public:
         // Update the next empty with the deleted node
         write_val(recordNumber, 0, 1);
 
-        // update the status of the node 
+        // update the status of the node
         leaf_state(recordNumber , -1);
 
 
-        // write the next empty that we get it from the header 
+        // write the next empty that we get it from the header
         // in the deleted node
 
         vector<pair<int, int>> updatedNextEmpty;
@@ -739,15 +744,15 @@ public:
         writeNode(updatedNextEmpty , recordNumber);
     }
 
-    //Search in parent to get the ref of prev max 
+    //Search in parent to get the ref of prev max
     //then take the max from the child and update prev max in the parent with the new max
 
     void updatePreviousSibling(int parentRecordNumber , int prevMax){}
 
 
-    // check all visited node need to update or not 
+    // check all visited node need to update or not
     void checkForUpdate(stack<int> visited , stack<int> refChild ,int recordId , int previousMax = -1){
-        // check in the visited node 
+        // check in the visited node
         // we remove pair exists in the parent then update parent(case 2)
         // else don't update parent (case 1)
         while (!visited.empty()) {
@@ -796,14 +801,13 @@ public:
         return make_pair(-1, false);
     }
 
-// return true if taking a value from the sibling is allowed; otherwise, return false
+    // return true if taking a value from the sibling is allowed; otherwise, return false
     bool getFromSibling(int siblingRecordNumber) {
         vector<pair<int, int>> sibling = read_node_values(siblingRecordNumber);
 
         // Check if the sibling has more than m/2 values
         return (sibling.size() > m / 2);
     }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -944,15 +948,15 @@ int main() {
     }
     if (Choice==2 || go){
         if(!go){
-        char *FileName=new char[100];
-        int RecordSize,M;
-        cout <<"Enter The File Name==>" <<endl;
-        cin>>FileName;
-        cout<<" Enter The RecordSize==>"<<endl;
-        cin>>RecordSize;
-        cout<<" Enter M==>"<<endl;
-        cin>>M;
-        btree.CreateIndexFileFile(FileName, RecordSize,M);
+            char *FileName=new char[100];
+            int RecordSize,M;
+            cout <<"Enter The File Name==>" <<endl;
+            cin>>FileName;
+            cout<<" Enter The RecordSize==>"<<endl;
+            cin>>RecordSize;
+            cout<<" Enter M==>"<<endl;
+            cin>>M;
+            btree.CreateIndexFileFile(FileName, RecordSize,M);
         }
         while(true){
             int c;
@@ -972,7 +976,7 @@ int main() {
                 cout<< "Enter record ID: \n";
                 cin >> recID;
                 btree.DeleteRecordFromIndex(recID);
-             }
+            }
             else if(c== 3){
                 int recID;
                 cout<< "Enter record ID: \n";
