@@ -374,6 +374,8 @@ public:
         return read_val(recordNumber, 0);
     }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     
     // delete from non-leaf nodes
     void DeleteRecordFromIndex (int recordId, int reference){
@@ -447,14 +449,41 @@ public:
                 // get from the next sibling 
                 // this does not affect on the value in the parent of the sibling
                 if(!isPrevious){
+                    vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+                    pair<int, int> front = sibling[0];
+                    sibling.erase(sibling.begin());
+
+                    // keep track of the previous max to update it after take key from next sibling
+                    int previousMax = current.back().first;
+                    current.push_back(front);
+                    sort(current.begin(), current.end());
+
+                    writeNode(sibling , siblingIndex);
+                    writeNode(current , i);
+
                     
+                    checkForUpdate(visited , refChild , recordId , previousMax );
 
                 }
 
                 // get from the previous sibling
                 // this affects on the value in the parent of the sibling
                 else{
-                    
+                    vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+                    pair<int, int> end = sibling.back();
+                    sibling.pop_back();
+
+                    current.push_back(end);
+                    sort(current.begin(), current.end());
+
+
+                    writeNode(sibling , siblingIndex);
+                    writeNode(current , i);
+
+                    updatePreviousSibling(visited.top() , end.first);
+
+                    checkForUpdate(visited , refChild , recordId);
+
                 }
 
 
@@ -463,12 +492,47 @@ public:
             // merge two nodes(case 4)
             else{
 
-               
+                // get sibling 
+                vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+
+                // get the max value of the sibling 
+                int prevMax = sibling.back().first;
+
+                // merge the current node with the sibling 
+                for (auto pair: current){
+                    sibling.push_back(pair);
+                }
+
+
+                // sort the node and write it to file
+                sort(sibling.begin(), sibling.end());
+
+                writeNode(sibling , siblingIndex);
+
+                // remove the pair of the deleted node from the parent
+                updateParentAfterMerge(visited.top(), refChild.top());
+
+                // change the last reference of the deleted node 
+                // to the reference of the merged sibling node
+                refChild.pop();
+                refChild.push(siblingIndex);
+
+
+                checkForUpdate(visited , refChild , recordId , prevMax);
+
+                
+                updateHeaderAfterDelete(i);
 
             }
 
-        }         
+        }
+
+                
+
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
     // delete from the leaf nodes
@@ -567,13 +631,21 @@ public:
             // get from sibling is allowed (case 3)
             if(getFromSibling(siblingIndex)){
 
+
                 // get from the next sibling 
                 // this does not affect on the value in the parent of the sibling
                 if(!isPrevious){
-                    
+                    vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+                    pair<int, int> front = sibling[0];
+                    sibling.erase(sibling.begin());
+
                     // keep track of the previous max to update it after take key from next sibling
                     int previousMax = current.back().first;
-                    
+                    current.push_back(front);
+                    sort(current.begin(), current.end());
+
+                    writeNode(sibling , siblingIndex);
+                    writeNode(current , i);
 
                     
                     checkForUpdate(visited , refChild , recordId , previousMax );
@@ -583,25 +655,48 @@ public:
                 // get from the previous sibling
                 // this affects on the value in the parent of the sibling
                 else{
+                    vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+                    pair<int, int> end = sibling.back();
+                    sibling.pop_back();
 
-                    // previous max of the previous sibling
-                    int previousMax ;
+                    current.push_back(end);
+                    sort(current.begin(), current.end());
 
-                    updatePreviousSibling(visited.top() , previousMax);
+
+                    
+                    writeNode(sibling , siblingIndex);
+                    
+                    
+                    writeNode(current , i);
+
+                    
+                    updatePreviousSibling(visited.top() , end.first);
 
                     checkForUpdate(visited , refChild , recordId);
 
                 }
-
 
             }
 
             // merge two nodes(case 4)
             else{
 
-                // previous max of the sibling
-                int previousMax ;
-                
+                // get sibling 
+                vector<pair<int, int>> sibling = read_node_values(siblingIndex);
+
+                // get the max value of the sibling 
+                int prevMax = sibling.back().first;
+
+                // merge the current node with the sibling 
+                for (auto pair: current){
+                    sibling.push_back(pair);
+                }
+
+
+                // sort the node and write it to file
+                sort(sibling.begin(), sibling.end());
+
+                writeNode(sibling , siblingIndex);
 
                 // remove the pair of the deleted node from the parent
                 bool isUpdated = updateParentAfterMerge(visited.top(), refChild.top());
@@ -616,7 +711,7 @@ public:
                 refChild.push(siblingIndex);
 
 
-                checkForUpdate(visited , refChild , recordId , previousMax);
+                checkForUpdate(visited , refChild , recordId , prevMax);
 
                 }
 
@@ -635,6 +730,9 @@ public:
                 
 
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
     // update the root if it contains one value
@@ -679,6 +777,10 @@ public:
 
     }
 
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
     // remove the key and its reference of the deleted node from the parent
     bool updateParentAfterMerge(int parentRecordNumber,  int deleteRef){
         vector<pair<int, int>> parent;
@@ -715,6 +817,9 @@ public:
 
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
     // set the header to the new deleted node
     // and put the previous (next empty) in the deleted node
@@ -742,11 +847,38 @@ public:
         writeNode(updatedNextEmpty , recordNumber);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
     //Search in parent to get the ref of prev max 
     //then take the max from the child and update prev max in the parent with the new max
 
-    void updatePreviousSibling(int parentRecordNumber , int prevMax){}
+    void updatePreviousSibling(int parentRecordNumber , int prevMax){
 
+        vector<pair<int, int>> parent;
+        parent = read_node_values(parentRecordNumber);
+        int ref = 0;
+
+        for (auto& p : parent) {
+           if(p.first == prevMax){
+                ref = p.second;
+                vector<pair<int, int>> child;
+                child = read_node_values(ref);
+
+                p.first = child.back().first;
+
+                break;
+           }
+        }
+
+        // write the updated parent in the file
+        writeNode(parent , parentRecordNumber);
+    }
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // check all visited node need to update or not 
     void checkForUpdate(stack<int> visited , stack<int> refChild ,int recordId , int previousMax = -1){
@@ -770,14 +902,54 @@ public:
         }
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 
     //get sibling and its position (previous sibling or next sibling)
     // false if next sibling and true if previous sibling
-    pair<int , bool> getSibling(int parentRecordNumber , int ref){}
+    pair<int , bool> getSibling(int parentRecordNumber , int ref){
+        pair<int, bool> siblingAndPosition;
+        vector<pair<int, int>> parent;
+        parent = read_node_values(parentRecordNumber);
+
+        //get the next sibling if the node in the first 
+        if(parent[0].second == ref){
+            siblingAndPosition.first = parent[1].second;
+            siblingAndPosition.second = false;
+            return siblingAndPosition;
+        }
+        
+        // search for the previous sibling
+        for(auto it =parent.begin(); it !=parent.end(); ++it){
+            auto nextIt = next(it);
+            if(nextIt->second == ref){
+                siblingAndPosition.first = it->second;
+                siblingAndPosition.second = true;
+                return siblingAndPosition;
+                
+            }
+        }
+        
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     // return true if the taking value from the sibling is allowed otherwise return false
-    bool getFromSibling(int siblingRecoredNumber){}
+    bool getFromSibling(int siblingRecoredNumber){
+        vector<pair<int, int>> sibling;
+        sibling = read_node_values(siblingRecoredNumber);
+
+        if(sibling.size()>m/2){
+            return true;
+        }
+
+        return false;
+    }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -841,7 +1013,7 @@ public:
                 }
             }
             // B-Tree traversal
-            if (!found) i = current.back().second;
+            if (!found) return -1;
         }
 
         current = read_node_values(i);
@@ -899,6 +1071,20 @@ public :
         cout<<"Record (32, 240) is inserted\n";
         btree.InsertNewRecordAtIndex(32, 240);
         btree.DisplayIndexFileContent();
+        cout << "*****************************************************\n";
+        cout<<"Record ID (10) is deleted\n";
+        btree.DeleteRecordFromIndex(10);
+        btree.DisplayIndexFileContent();
+        cout << "*****************************************************\n";
+        cout<<"Record ID (9) is deleted\n";
+        btree.DeleteRecordFromIndex(9);
+        btree.DisplayIndexFileContent();
+        cout << "*****************************************************\n";
+        cout<<"Record ID (8) is deleted\n";
+        btree.DeleteRecordFromIndex(8);
+        btree.DisplayIndexFileContent();
+
+
     }
 };
 int main() {
@@ -906,18 +1092,16 @@ int main() {
     BTree btree;
     cout <<"If You Want to Run Example In Assigment Press 1 or 2 For New Example==>";
     cin>>Choice;
-    bool go =false;
     if (Choice==1) {
         //For Me Please Don't Delete This Code
         //btree.CreateIndexFileFile("C:\\Users\\dell\\CLionProjects\\untitled4\\index.txt", 10,5);
         btree.CreateIndexFileFile("index.txt", 10,5);
         Example example;
         example.insertions(btree);
-        go=true;
 
     }
-    if (Choice==2 || go){
-        if(!go){
+    if (Choice==2){
+        
         char *FileName=new char[100];
         int RecordSize,M;
         cout <<"Enter The File Name==>" <<endl;
@@ -927,7 +1111,6 @@ int main() {
         cout<<" Enter M==>"<<endl;
         cin>>M;
         btree.CreateIndexFileFile(FileName, RecordSize,M);
-        }
         while(true){
             int c;
             cout << "1-InsertNewRecordAtIndex\n2-delete\n3-search\n4-DisplayIndexFileContent\n5-exit\n";
